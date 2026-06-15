@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Checker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0f1117;
+  color: #e8eaf0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; flex-direction: column; flex: 1; }
+.screen.active { display: flex; }
+
+/* ── LOGIN ── */
+#loginScreen {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login-card {
+  background: #141929;
+  border: 1px solid #1f2840;
+  border-radius: 18px;
+  padding: 40px 36px 36px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.login-logo {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 4px;
+}
+.login-logo h1 { font-size: 1.15rem; font-weight: 700; color: #fff; }
+.login-logo span { font-size: 0.76rem; color: #6b7280; display: block; }
+.login-card h2 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+.login-card p { font-size: 0.82rem; color: #6b7280; margin-top: -14px; }
+.field { display: flex; flex-direction: column; gap: 7px; }
+.field label { font-size: 0.78rem; color: #9ca3af; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+.field input {
+  background: #0f1117;
+  border: 1px solid #1f2840;
+  border-radius: 10px;
+  color: #e8eaf0;
+  font-size: 0.9rem;
+  font-family: inherit;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus { border-color: #2e4880; }
+.field input::placeholder { color: #3d4255; }
+.btn-primary {
+  background: #1d3461;
+  color: #7ab3ff;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+.btn-primary:hover { background: #243e75; }
+.login-err {
+  font-size: 0.82rem;
+  color: #f87171;
+  background: #1a1111;
+  border: 1px solid #3b1a1a;
+  border-radius: 8px;
+  padding: 9px 12px;
+  display: none;
+}
+
+/* ── HEADER ── */
+header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #1e2130;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+header svg { flex-shrink: 0; }
+header h1 { font-size: 1.1rem; font-weight: 600; color: #fff; flex: 1; }
+header .user-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: #141929; border: 1px solid #1f2840;
+  border-radius: 20px; padding: 5px 12px 5px 8px;
+  font-size: 0.8rem; color: #9ca3af; cursor: default;
+}
+header .user-pill .avatar-sm {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #1d3461; color: #4f8ef7;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700;
+}
+.header-btn {
+  background: none; border: 1px solid #1f2840; border-radius: 8px;
+  color: #6b7280; padding: 6px 12px; font-size: 0.78rem;
+  cursor: pointer; font-family: inherit; transition: all 0.2s;
+}
+.header-btn:hover { border-color: #2e4880; color: #e8eaf0; }
+.header-btn.admin-btn { color: #a78bfa; border-color: #2d2040; }
+.header-btn.admin-btn:hover { background: #1a1229; }
+
+/* ── MAIN APP ── */
+#appScreen { flex-direction: column; }
+.app-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 20px 32px;
+}
+
+/* Upload zone */
+.upload-zone {
+  margin: 28px 0 20px;
+  border: 2px dashed #2a2d3e;
+  border-radius: 14px;
+  padding: 32px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.drag-over { border-color: #4f8ef7; background: #131929; }
+.upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-icon {
+  width: 40px; height: 40px; background: #1a1e2e; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
+}
+.upload-zone p { font-size: 0.86rem; color: #9ca3af; line-height: 1.6; }
+.upload-zone strong { color: #e8eaf0; }
+.file-loaded {
+  margin: 0 0 20px; background: #141929; border: 1px solid #1f2840;
+  border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-size: 0.84rem;
+}
+.file-loaded .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+.file-loaded strong { color: #fff; }
+.file-loaded span { color: #6b7280; margin-left: 6px; }
+.file-loaded button { margin-left: auto; background: none; border: none; color: #4b5563; cursor: pointer; font-size: 1rem; padding: 2px 6px; }
+.file-loaded button:hover { color: #ef4444; }
+
+/* Chat */
+.chat { flex: 1; display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; min-height: 200px; }
+.placeholder {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px; color: #3d4255; font-size: 0.85rem; text-align: center; padding: 40px 0;
+}
+.placeholder svg { opacity: 0.3; }
+.msg { display: flex; gap: 10px; align-items: flex-start; }
+.msg.user { flex-direction: row-reverse; }
+.bubble { max-width: 78%; padding: 11px 15px; border-radius: 14px; font-size: 0.875rem; line-height: 1.55; }
+.msg.user .bubble { background: #1d3461; color: #c9deff; border-bottom-right-radius: 4px; }
+.msg.bot .bubble { background: #171c2b; border: 1px solid #1f2840; color: #e8eaf0; border-bottom-left-radius: 4px; }
+.msg.bot .bubble.result { font-size: 2rem; font-weight: 700; color: #4f8ef7; letter-spacing: 0.02em; padding: 16px 22px; }
+.msg.bot .bubble.err { color: #f87171; border-color: #3b1a1a; background: #1a1111; font-size: 1rem; font-weight: 600; }
+.msg.bot .bubble.yes { color: #4ade80; border-color: #14321a; background: #0e1f12; font-size: 1rem; font-weight: 600; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+.msg.user .avatar { background: #1d3461; color: #4f8ef7; }
+.msg.bot .avatar { background: #1a1e2e; border: 1px solid #2a2d3e; color: #6b7280; }
+.input-row { display: flex; gap: 10px; align-items: flex-end; }
+textarea {
+  flex: 1; background: #141929; border: 1px solid #1f2840; border-radius: 12px;
+  color: #e8eaf0; font-size: 0.875rem; font-family: inherit; padding: 12px 16px;
+  resize: none; min-height: 48px; max-height: 140px; outline: none; transition: border-color 0.2s; line-height: 1.5;
+}
+textarea:focus { border-color: #2e4880; }
+textarea::placeholder { color: #3d4255; }
+textarea:disabled { opacity: 0.5; }
+button#send {
+  background: #1d3461; border: none; color: #4f8ef7; border-radius: 12px;
+  width: 48px; height: 48px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s; flex-shrink: 0;
+}
+button#send:hover { background: #243e75; }
+button#send:disabled { opacity: 0.4; cursor: not-allowed; }
+.hint { font-size: 0.75rem; color: #3d4255; text-align: center; margin-top: 10px; line-height: 1.5; }
+.typing { display: flex; gap: 4px; padding: 4px 0; }
+.typing span { width: 6px; height: 6px; border-radius: 50%; background: #3d4255; animation: blink 1.2s infinite; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100% { opacity:0.2; transform:scale(0.9); } 40% { opacity:1; transform:scale(1.1); } }
+
+/* ── MODAL ── */
+.modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); z-index: 100;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: #141929; border: 1px solid #1f2840; border-radius: 16px;
+  width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+  padding: 28px 28px 24px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; }
+.modal-header h2 { font-size: 1.05rem; font-weight: 700; color: #fff; }
+.modal-close { background: none; border: none; color: #6b7280; font-size: 1.3rem; cursor: pointer; padding: 2px 6px; }
+.modal-close:hover { color: #e8eaf0; }
+.modal-section { display: flex; flex-direction: column; gap: 10px; }
+.modal-section h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; font-weight: 600; }
+.user-list { display: flex; flex-direction: column; gap: 8px; }
+.user-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #0f1117; border: 1px solid #1a1e2e; border-radius: 10px; padding: 10px 12px;
+}
+.user-row .uname { flex: 1; font-size: 0.88rem; font-weight: 500; }
+.user-row .badge {
+  font-size: 0.68rem; padding: 2px 8px; border-radius: 20px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.badge.admin { background: #2d2040; color: #a78bfa; }
+.badge.active { background: #0e2016; color: #4ade80; }
+.user-row .row-actions { display: flex; gap: 6px; }
+.row-btn {
+  font-size: 0.74rem; padding: 4px 10px; border-radius: 7px; border: 1px solid;
+  cursor: pointer; font-family: inherit; transition: all 0.15s; background: none;
+}
+.row-btn.edit { border-color: #2e4880; color: #7ab3ff; }
+.row-btn.edit:hover { background: #1d3461; }
+.row-btn.remove { border-color: #3b1a1a; color: #f87171; }
+.row-btn.remove:hover { background: #1a1111; }
+.add-user-form { display: flex; flex-direction: column; gap: 12px; }
+.add-user-form .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.add-user-form .btn-primary { margin-top: 2px; }
+.modal-msg { font-size: 0.8rem; padding: 8px 12px; border-radius: 8px; display: none; }
+.modal-msg.ok { background: #0e2016; border: 1px solid #14321a; color: #4ade80; }
+.modal-msg.bad { background: #1a1111; border: 1px solid #3b1a1a; color: #f87171; }
+
+/* ── CHANGE PASSWORD MODAL ── */
+#pwModal .modal { max-width: 380px; }
+
+/* ── RENAME MODAL ── */
+#renameModal .modal { max-width: 380px; }
+
+/* divider */
+.divider { height: 1px; background: #1f2840; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ LOGIN ═══ -->
+<div id="loginScreen" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg width="34" height="34" viewBox="0 0 36 36" fill="none">
+        <rect width="36" height="36" rx="10" fill="#141929"/>
+        <rect x="7" y="9" width="22" height="18" rx="2" stroke="#4f8ef7" stroke-width="1.5"/>
+        <line x1="7" y1="13" x2="29" y2="13" stroke="#4f8ef7" stroke-width="1.5"/>
+        <line x1="14" y1="9" x2="14" y2="27" stroke="#4f8ef7" stroke-width="1" stroke-opacity="0.5"/>
+        <line x1="21" y1="9" x2="21" y2="27" stroke="#4f8ef7" stroke-width="1" stroke-opacity="0.5"/>
+      </svg>
+      <div><h1>Stock Checker</h1><span>Inventory lookup system</span></div>
+    </div>
+    <div>
+      <h2>Sign in</h2>
+      <p style="margin-top:6px">Enter your credentials to continue.</p>
+    </div>
+    <div class="field"><label>Username</label><input type="text" id="loginUser" placeholder="Username" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()"></div>
+    <div class="login-err" id="loginErr"></div>
+    <button class="btn-primary" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ APP ════ -->
+<div id="appScreen" class="screen">
+  <header>
+    <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="10" fill="#141929"/>
+      <rect x="7" y="9" width="22" height="18" rx="2" stroke="#4f8ef7" stroke-width="1.5"/>
+      <line x1="7" y1="13" x2="29" y2="13" stroke="#4f8ef7" stroke-width="1.5"/>
+      <line x1="14" y1="9" x2="14" y2="27" stroke="#4f8ef7" stroke-width="1" stroke-opacity="0.5"/>
+      <line x1="21" y1="9" x2="21" y2="27" stroke="#4f8ef7" stroke-width="1" stroke-opacity="0.5"/>
+    </svg>
+    <h1>Stock Checker</h1>
+    <div id="headerPill" class="user-pill">
+      <div class="avatar-sm" id="headerInitial">?</div>
+      <span id="headerName">—</span>
+    </div>
+    <button class="header-btn" onclick="openRenameModal()">Rename</button>
+    <button class="header-btn" onclick="openPwModal()">Password</button>
+    <button class="header-btn admin-btn" id="adminBtn" onclick="openAdminModal()" style="display:none">⚙ Users</button>
+    <button class="header-btn" onclick="doLogout()">Sign out</button>
+  </header>
+
+  <div class="app-body">
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" accept=".xlsx,.xls,.csv" id="fileInput">
+      <div class="upload-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f8ef7" stroke-width="1.8">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <p><strong>Drop your Excel file here</strong><br>or click to browse — .xlsx, .xls, .csv</p>
+    </div>
+    <div class="file-loaded" id="fileLoaded" style="display:none">
+      <div class="dot"></div>
+      <div><strong id="fileName"></strong><span id="fileStats"></span></div>
+      <button onclick="clearFile()" title="Remove file">✕</button>
+    </div>
+
+    <div class="chat" id="chat">
+      <div class="placeholder" id="placeholder">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <p>Upload your stock file, then ask<br>about any item to see its packet count.</p>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <textarea id="query" placeholder="e.g. Can I get 40 packets of JK Endura, GSM 200, Size CM 63.5*91" rows="1" onkeydown="handleKey(event)" disabled></textarea>
+      <button id="send" onclick="sendQuery()" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <p class="hint">Press Enter to send · Shift+Enter for new line</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ ADMIN MODAL ════ -->
+<div class="modal-bg" id="adminModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>⚙ User Management</h2>
+      <button class="modal-close" onclick="closeModal('adminModal')">✕</button>
+    </div>
+
+    <div class="modal-section">
+      <h3>Current Users</h3>
+      <div class="user-list" id="userList"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="modal-section">
+      <h3>Add New User</h3>
+      <div class="add-user-form">
+        <div class="row2">
+          <div class="field"><label>Username</label><input type="text" id="newUsername" placeholder="e.g. john"></div>
+          <div class="field"><label>Password</label><input type="password" id="newPassword" placeholder="Set a password"></div>
+        </div>
+        <div class="modal-msg" id="addMsg"></div>
+        <button class="btn-primary" onclick="addUser()">Add User</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ EDIT USER MODAL ════ -->
+<div class="modal-bg" id="editUserModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h2>Edit User</h2>
+      <button class="modal-close" onclick="closeModal('editUserModal')">✕</button>
+    </div>
+    <div class="field"><label>New Username</label><input type="text" id="editUsername" placeholder="New username"></div>
+    <div class="field"><label>New Password</label><input type="password" id="editPassword" placeholder="Leave blank to keep current"></div>
+    <div class="modal-msg" id="editMsg"></div>
+    <button class="btn-primary" onclick="saveEditUser()">Save Changes</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ CHANGE PASSWORD MODAL ════ -->
+<div class="modal-bg" id="pwModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h2>Change Password</h2>
+      <button class="modal-close" onclick="closeModal('pwModal')">✕</button>
+    </div>
+    <div class="field"><label>Current Password</label><input type="password" id="pwCurrent" placeholder="Current password"></div>
+    <div class="field"><label>New Password</label><input type="password" id="pwNew" placeholder="New password"></div>
+    <div class="field"><label>Confirm New Password</label><input type="password" id="pwConfirm" placeholder="Confirm new password"></div>
+    <div class="modal-msg" id="pwMsg"></div>
+    <button class="btn-primary" onclick="changePassword()">Update Password</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ RENAME MODAL ════ -->
+<div class="modal-bg" id="renameModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h2>Rename Account</h2>
+      <button class="modal-close" onclick="closeModal('renameModal')">✕</button>
+    </div>
+    <div class="field"><label>New Username</label><input type="text" id="renameInput" placeholder="New username"></div>
+    <div class="modal-msg" id="renameMsg"></div>
+    <button class="btn-primary" onclick="renameAccount()">Save</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  AUTH STORE  (localStorage)
+// ══════════════════════════════════════════════════════════════════
+const STORE_KEY = 'stockchecker_users';
+
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || null; } catch { return null; }
+}
+function saveUsers(users) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(users));
+}
+
+function initUsers() {
+  if (!getUsers()) {
+    saveUsers([{ id: 'admin', username: 'ADMIN', password: 'KPI@123', isAdmin: true }]);
+  }
+}
+
+initUsers();
+
+// session: { userId }
+let session = null;
+
+function currentUser() {
+  if (!session) return null;
+  return getUsers().find(u => u.id === session.userId) || null;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  SCREENS
+// ══════════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════════════════════════
+function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.style.display = 'none';
+
+  const users = getUsers();
+  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+
+  if (!user) {
+    errEl.textContent = 'Incorrect username or password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  session = { userId: user.id };
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  enterApp();
+}
+
+function enterApp() {
+  const u = currentUser();
+  if (!u) { doLogout(); return; }
+  document.getElementById('headerName').textContent = u.username;
+  document.getElementById('headerInitial').textContent = u.username[0].toUpperCase();
+  document.getElementById('adminBtn').style.display = u.isAdmin ? '' : 'none';
+  showScreen('appScreen');
+}
+
+function doLogout() {
+  session = null;
+  workbookData = null;
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('fileLoaded').style.display = 'none';
+  document.getElementById('chat').innerHTML = `<div class="placeholder" id="placeholder">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <p>Upload your stock file, then ask<br>about any item to see its packet count.</p>
+  </div>`;
+  document.getElementById('query').disabled = true;
+  document.getElementById('send').disabled = true;
+  showScreen('loginScreen');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ADMIN MODAL
+// ══════════════════════════════════════════════════════════════════
+function openAdminModal() {
+  renderUserList();
+  document.getElementById('newUsername').value = '';
+  document.getElementById('newPassword').value = '';
+  hideModalMsg('addMsg');
+  openModal('adminModal');
+}
+
+function renderUserList() {
+  const users = getUsers();
+  const ul = document.getElementById('userList');
+  ul.innerHTML = '';
+  users.forEach(u => {
+    const row = document.createElement('div');
+    row.className = 'user-row';
+    const isMe = session && u.id === session.userId;
+    row.innerHTML = `
+      <div class="uname">${escHtml(u.username)}</div>
+      ${u.isAdmin ? '<span class="badge admin">Admin</span>' : '<span class="badge active">User</span>'}
+      <div class="row-actions">
+        <button class="row-btn edit" onclick="openEditUser('${u.id}')">Edit</button>
+        ${!u.isAdmin ? `<button class="row-btn remove" onclick="removeUser('${u.id}')">Remove</button>` : ''}
+      </div>`;
+    ul.appendChild(row);
+  });
+}
+
+let editingUserId = null;
+function openEditUser(id) {
+  editingUserId = id;
+  const user = getUsers().find(u => u.id === id);
+  if (!user) return;
+  document.getElementById('editUsername').value = user.username;
+  document.getElementById('editPassword').value = '';
+  hideModalMsg('editMsg');
+  openModal('editUserModal');
+}
+
+function saveEditUser() {
+  const newName = document.getElementById('editUsername').value.trim();
+  const newPass = document.getElementById('editPassword').value;
+  if (!newName) { showModalMsg('editMsg', 'Username cannot be empty.', false); return; }
+
+  const users = getUsers();
+  const conflict = users.find(u => u.username.toLowerCase() === newName.toLowerCase() && u.id !== editingUserId);
+  if (conflict) { showModalMsg('editMsg', 'That username is already taken.', false); return; }
+
+  const idx = users.findIndex(u => u.id === editingUserId);
+  if (idx === -1) return;
+  users[idx].username = newName;
+  if (newPass) users[idx].password = newPass;
+  saveUsers(users);
+
+  // update header if editing self
+  if (session && editingUserId === session.userId) {
+    document.getElementById('headerName').textContent = newName;
+    document.getElementById('headerInitial').textContent = newName[0].toUpperCase();
+  }
+
+  showModalMsg('editMsg', 'Saved!', true);
+  renderUserList();
+}
+
+function removeUser(id) {
+  const users = getUsers();
+  const user = users.find(u => u.id === id);
+  if (!user || user.isAdmin) return;
+  if (!confirm(`Remove user "${user.username}"? They will no longer be able to sign in.`)) return;
+  saveUsers(users.filter(u => u.id !== id));
+  renderUserList();
+}
+
+function addUser() {
+  const username = document.getElementById('newUsername').value.trim();
+  const password = document.getElementById('newPassword').value;
+  if (!username || !password) { showModalMsg('addMsg', 'Both username and password are required.', false); return; }
+
+  const users = getUsers();
+  if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
+    showModalMsg('addMsg', 'That username already exists.', false); return;
+  }
+
+  const newUser = {
+    id: 'u_' + Date.now(),
+    username,
+    password,
+    isAdmin: false
+  };
+  users.push(newUser);
+  saveUsers(users);
+  document.getElementById('newUsername').value = '';
+  document.getElementById('newPassword').value = '';
+  showModalMsg('addMsg', `User "${username}" added successfully.`, true);
+  renderUserList();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  CHANGE PASSWORD
+// ══════════════════════════════════════════════════════════════════
+function openPwModal() {
+  document.getElementById('pwCurrent').value = '';
+  document.getElementById('pwNew').value = '';
+  document.getElementById('pwConfirm').value = '';
+  hideModalMsg('pwMsg');
+  openModal('pwModal');
+}
+
+function changePassword() {
+  const current = document.getElementById('pwCurrent').value;
+  const newPw = document.getElementById('pwNew').value;
+  const confirm = document.getElementById('pwConfirm').value;
+  const u = currentUser();
+  if (!u) return;
+  if (current !== u.password) { showModalMsg('pwMsg', 'Current password is incorrect.', false); return; }
+  if (!newPw) { showModalMsg('pwMsg', 'New password cannot be empty.', false); return; }
+  if (newPw !== confirm) { showModalMsg('pwMsg', 'Passwords do not match.', false); return; }
+
+  const users = getUsers();
+  const idx = users.findIndex(x => x.id === u.id);
+  users[idx].password = newPw;
+  saveUsers(users);
+  showModalMsg('pwMsg', 'Password updated!', true);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  RENAME
+// ══════════════════════════════════════════════════════════════════
+function openRenameModal() {
+  const u = currentUser();
+  document.getElementById('renameInput').value = u ? u.username : '';
+  hideModalMsg('renameMsg');
+  openModal('renameModal');
+}
+
+function renameAccount() {
+  const newName = document.getElementById('renameInput').value.trim();
+  if (!newName) { showModalMsg('renameMsg', 'Username cannot be empty.', false); return; }
+  const users = getUsers();
+  const u = currentUser();
+  if (!u) return;
+  const conflict = users.find(x => x.username.toLowerCase() === newName.toLowerCase() && x.id !== u.id);
+  if (conflict) { showModalMsg('renameMsg', 'That username is already taken.', false); return; }
+  const idx = users.findIndex(x => x.id === u.id);
+  users[idx].username = newName;
+  saveUsers(users);
+  document.getElementById('headerName').textContent = newName;
+  document.getElementById('headerInitial').textContent = newName[0].toUpperCase();
+  showModalMsg('renameMsg', 'Name updated!', true);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MODAL HELPERS
+// ══════════════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showModalMsg(id, text, ok) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'modal-msg ' + (ok ? 'ok' : 'bad');
+  el.style.display = 'block';
+}
+function hideModalMsg(id) {
+  const el = document.getElementById(id);
+  el.style.display = 'none';
+}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// close modals on background click
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  FILE HANDLING
+// ══════════════════════════════════════════════════════════════════
+let workbookData = null;
+const fileInput = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: 'array' });
+    const sheets = {};
+    let totalRows = 0;
+    wb.SheetNames.forEach(name => {
+      const raw = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' });
+      sheets[name] = raw;
+      totalRows += raw.length;
+    });
+    workbookData = { sheets, sheetNames: wb.SheetNames };
+    document.getElementById('uploadZone').style.display = 'none';
+    document.getElementById('fileLoaded').style.display = 'flex';
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileStats').textContent =
+      ` · ${wb.SheetNames.length} sheet${wb.SheetNames.length > 1 ? 's' : ''}, ${totalRows} rows`;
+    document.getElementById('send').disabled = false;
+    document.getElementById('query').disabled = false;
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearFile() {
+  workbookData = null;
+  fileInput.value = '';
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('fileLoaded').style.display = 'none';
+  document.getElementById('send').disabled = true;
+  document.getElementById('query').disabled = true;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  CHAT
+// ══════════════════════════════════════════════════════════════════
+const chat = document.getElementById('chat');
+
+function addMsg(content, role, cls = '') {
+  document.getElementById('placeholder')?.remove();
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  const u = currentUser();
+  av.textContent = role === 'user' ? (u ? u.username[0].toUpperCase() : 'U') : 'AI';
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${cls}`;
+  bubble.innerHTML = content;
+  div.appendChild(av); div.appendChild(bubble);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return bubble;
+}
+
+function addTyping() {
+  document.getElementById('placeholder')?.remove();
+  const div = document.createElement('div');
+  div.className = 'msg bot'; div.id = 'typing-indicator';
+  div.innerHTML = `<div class="avatar">AI</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+function removeTyping() { document.getElementById('typing-indicator')?.remove(); }
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendQuery(); }
+}
+
+async function sendQuery() {
+  const q = document.getElementById('query').value.trim();
+  if (!q || !workbookData) return;
+  document.getElementById('query').value = '';
+  addMsg(q, 'user');
+  addTyping();
+  document.getElementById('send').disabled = true;
+
+  const sheetText = buildSheetText();
+
+  const systemPrompt = `You are a stock inventory lookup assistant.
+The user will ask about a product — either to check how many packets are in stock, or to ask if a certain quantity is available.
+
+Your job:
+1. Find the matching row in the spreadsheet using Quality name, GSM, Size CM, and/or Size IN.
+2. Be flexible with formatting (e.g. "63.5*91" matches "63.5 x 91").
+3. Read the "Packets" column for that row.
+
+Then respond based on what the user asked:
+
+SCENARIO A — User just asks how many packets exist (e.g. "how many packets of X are there?"):
+  Respond with ONLY the number. Nothing else. Example: 52
+
+SCENARIO B — User asks if they can get a specific quantity (e.g. "Can I get 40 packets of X"):
+  - If stock >= requested: respond with EXACTLY this format:
+    ✅ Yes — X packets in stock, Y requested.
+  - If stock < requested: respond with EXACTLY this format:
+    ❌ No — only X packets in stock, Y requested.
+  - Replace X with the stock number and Y with the requested number.
+
+SCENARIO C — Item not found in spreadsheet:
+  Respond with exactly: NOT FOUND
+
+Do not add any extra words, explanation, or punctuation beyond the formats above.
+
+SPREADSHEET DATA:
+${sheetText}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 150,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: q }]
+      })
+    });
+    const data = await res.json();
+    removeTyping();
+    if (data.error) {
+      addMsg(`Error: ${data.error.message}`, 'bot', 'err');
+    } else {
+      const answer = data.content?.find(b => b.type === 'text')?.text?.trim() ?? '—';
+      const isNotFound = answer.toUpperCase().includes('NOT FOUND');
+      const isNo = answer.startsWith('❌');
+      const isYes = answer.startsWith('✅');
+      let cls = 'result';
+      if (isNotFound || isNo) cls = 'err';
+      if (isYes) cls = 'yes';
+      addMsg(answer, 'bot', cls);
+    }
+  } catch (err) {
+    removeTyping();
+    addMsg(`Network error: ${err.message}`, 'bot', 'err');
+  }
+  document.getElementById('send').disabled = false;
+}
+
+function buildSheetText() {
+  const parts = [];
+  for (const name of workbookData.sheetNames) {
+    const rows = workbookData.sheets[name];
+    if (!rows || rows.length === 0) continue;
+    parts.push(`=== Sheet: ${name} ===`);
+    rows.forEach(row => parts.push(row.map(c => String(c)).join('\t')));
+  }
+  return parts.join('\n');
+}
+</script>
+</body>
+</html>
